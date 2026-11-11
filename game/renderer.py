@@ -42,6 +42,13 @@ class Renderer:
                      (0, y), (W, y))
             pygame.draw.line(self._boss_panel, (205, 95, 110), (0, 0), (W, 0), 1)                 # top light edge
             pygame.draw.line(self._boss_panel, (55, 12, 28), (0, BOSS_H - 2), (W, BOSS_H - 2), 3)  # bottom dark edge
+        self._hero_shadow = pygame.Surface((HERO_R * 2 + 10, 8), pygame.SRCALPHA)
+        pygame.draw.ellipse(self._hero_shadow, (0, 0, 0, 110), self._hero_shadow.get_rect())
+        bar_h = H - FLOOR_Y
+        self._bar_bg = pygame.Surface((W, bar_h))
+        for y in range(bar_h):
+            pygame.draw.line(self._bar_bg, mix((40, 40, 60), (18, 18, 30), y / bar_h), (0, y), (W, y))
+        self._gem_shadows = {}
         self._boss_tint = pygame.Surface((W, BOSS_H))                                        # red flash when it attacks
         self._boss_tint.fill((255, 60, 40))
         self.small = pygame.font.SysFont("arial", 14, bold=True)
@@ -150,6 +157,106 @@ class Renderer:
         self._text(s, str(block.hp), self.font, (40, 30, 50), center=(cx + 1, cy + 2))  # text shadow
         self._text(s, str(block.hp), self.font, WHITE, center=(cx, cy))
 
+    def _draw_hero(self, s, game, hurt_blink):
+        x, y = int(game.hero.x), HERO_Y
+        R = HERO_R
+        body = (255, 80, 80) if hurt_blink else (80, 200, 255)
+
+        sh = self._hero_shadow
+        s.blit(sh, (x - sh.get_width() // 2, FLOOR_Y - sh.get_height() + 1))    # floor shadow
+
+        pygame.draw.circle(s, (15, 25, 50), (x, y), R + 2)                      # dark halo: readable on busy backgrounds
+        pygame.draw.circle(s, mix(body, (0, 0, 0), 0.35), (x, y + 2), R)        # lower edge
+        pygame.draw.circle(s, body, (x, y), R)                                  # body
+        pygame.draw.ellipse(s, mix(body, WHITE, 0.65),
+                            (x - int(R * 0.64), y - int(R * 0.72), int(R * 0.64), int(R * 0.36)))   # gloss
+        pygame.draw.circle(s, WHITE, (x, y), R, 2)                              # white rim
+
+        # eyes look toward the aim direction (straight up outside the aim phase)
+        angle = aim_angle(game.hero.x, game.display.mouse_pos()) if game.state == State.AIM else math.pi / 2
+        px, py = math.cos(angle) * R * 0.12, -math.sin(angle) * R * 0.12
+        ex, ey, er = int(R * 0.36), int(R * 0.08), max(3, int(R * 0.29))
+        for sign in (-1, 1):
+            cx, cy = x + sign * ex, y + ey
+            pygame.draw.circle(s, WHITE, (cx, cy), er)
+            pygame.draw.circle(s, (20, 20, 40), (cx + int(round(px * 2)), cy + int(round(py * 2))),
+                            max(2, er // 2))
+
+    def _draw_heart(self, s, cx, cy, color):
+        pygame.draw.circle(s, color, (cx - 3, cy - 2), 4)
+        pygame.draw.circle(s, color, (cx + 3, cy - 2), 4)
+        pygame.draw.polygon(s, color, [(cx - 7, cy - 1), (cx + 7, cy - 1), (cx, cy + 7)])
+
+    def _draw_chip(self, s, x, cy, icon, value):
+        chip = pygame.Rect(x, cy - 11, 62, 22)
+        pygame.draw.rect(s, (14, 14, 24), chip, border_radius=11)
+        pygame.draw.rect(s, (70, 70, 95), chip, width=1, border_radius=11)
+        ix = x + 13
+        if icon == "ball":
+            pygame.draw.circle(s, WHITE, (ix, cy), 5)
+            pygame.draw.circle(s, (150, 150, 175), (ix, cy), 5, 1)
+        elif icon == "dmg":                                      # little sword
+            pygame.draw.line(s, (235, 240, 255), (ix - 1, cy + 1), (ix + 5, cy - 5), 3)
+            pygame.draw.line(s, (255, 200, 80), (ix - 4, cy - 1), (ix, cy + 3), 2)
+            pygame.draw.line(s, (200, 140, 60), (ix - 5, cy + 5), (ix - 2, cy + 2), 2)
+        else:                                                    # clock
+            pygame.draw.circle(s, (180, 190, 225), (ix, cy), 6, 2)
+            pygame.draw.line(s, (180, 190, 225), (ix, cy), (ix, cy - 3), 1)
+            pygame.draw.line(s, (180, 190, 225), (ix, cy), (ix + 3, cy), 1)
+        self._text(s, str(value), self.small, WHITE, center=(x + 40, cy))
+
+    def _draw_bottom_bar(self, s, game):
+        s.blit(self._bar_bg, (0, FLOOR_Y))
+        pygame.draw.line(s, (120, 120, 140), (0, FLOOR_Y), (W, FLOOR_Y), 2)
+        cy = FLOOR_Y + (H - FLOOR_Y) // 2 + 1
+        hero = game.hero
+
+        # health: heart + bar (orange "ghost" shows recent damage, fill colour follows health)
+        hurt = game.hurt_fx > 0
+        self._draw_heart(s, 20, cy, (255, 100, 110))
+        bar = pygame.Rect(36, cy - 8, 200, 16)
+        pygame.draw.rect(s, (35, 35, 48), bar, border_radius=8)
+        ratio = max(0.0, hero.hp / hero.max_hp)
+        ghost = max(0.0, game.hp_ghost / hero.max_hp)
+        inner = bar.w - 4
+        if ghost > 0:
+            pygame.draw.rect(s, (255, 170, 60),
+                            (bar.x + 2, bar.y + 2, int(inner * ghost), bar.h - 4), border_radius=6)
+        fill_w = int(inner * ratio)
+        if fill_w > 0:
+            col = (90, 220, 120) if ratio > 0.5 else (245, 190, 70) if ratio > 0.25 else (240, 80, 80)
+            pygame.draw.rect(s, col, (bar.x + 2, bar.y + 2, fill_w, bar.h - 4), border_radius=6)
+            if fill_w > 8:
+                pygame.draw.rect(s, mix(col, WHITE, 0.5),
+                                (bar.x + 5, bar.y + 3, fill_w - 6, 3), border_radius=2)
+        pygame.draw.rect(s, (10, 10, 18), bar, width=2, border_radius=8)
+        txt = f"{hero.hp}/{hero.max_hp}"
+        self._text(s, txt, self.tiny, (20, 20, 30), center=(bar.centerx + 1, bar.centery + 1))
+        self._text(s, txt, self.tiny, (255, 140, 140) if hurt else WHITE, center=bar.center)
+
+        # stat pills
+        x = W - 3 * 62 - 2 * 6 - 10
+        self._draw_chip(s, x, cy, "ball", hero.balls)
+        self._draw_chip(s, x + 68, cy, "dmg", hero.damage)
+        self._draw_chip(s, x + 136, cy, "turn", game.turn)
+
+    def _gem(self, s, x, y, color, R):
+        """Glossy round pickup: soft shadow, dark halo, lower edge, body, gloss, white rim."""
+        cx, cy = int(x), int(y)
+        sh = self._gem_shadows.get(R)
+        if sh is None:
+            sh = pygame.Surface((2 * R + 6, 2 * R + 6), pygame.SRCALPHA)
+            pygame.draw.circle(sh, (10, 20, 50, 90), (sh.get_width() // 2, sh.get_height() // 2), R + 1)
+            self._gem_shadows[R] = sh
+        s.blit(sh, (cx - sh.get_width() // 2, cy - sh.get_height() // 2 + 4))
+
+        pygame.draw.circle(s, (15, 25, 50), (cx, cy), R + 2)                  # dark halo
+        pygame.draw.circle(s, mix(color, (0, 0, 0), 0.35), (cx, cy + 2), R)   # lower edge
+        pygame.draw.circle(s, color, (cx, cy), R)                             # body
+        pygame.draw.ellipse(s, mix(color, WHITE, 0.65),
+                            (cx - int(R * 0.6), cy - int(R * 0.74), int(R * 0.7), int(R * 0.34)))  # gloss
+        pygame.draw.circle(s, WHITE, (cx, cy), R, 2)                          # white rim
+
     def draw(self, game):
         s = game.canvas
         #s.fill(BG)
@@ -202,9 +309,7 @@ class Renderer:
                                int(HERO_R + (1 - atk) * 30), 3)
 
         hurt_blink = game.hurt_fx > 0 and int(game.hurt_fx * 20) % 2 == 0
-        hero_color = (255, 80, 80) if hurt_blink else (80, 200, 255)
-        pygame.draw.circle(s, hero_color, (int(game.hero.x), HERO_Y), HERO_R)
-        pygame.draw.circle(s, WHITE, (int(game.hero.x), HERO_Y), HERO_R, 2)
+        self._draw_hero(s, game, hurt_blink)
 
         if game.state == State.AIM:
             angle = aim_angle(game.hero.x, game.display.mouse_pos())
@@ -225,17 +330,7 @@ class Renderer:
                 pygame.draw.circle(s, WHITE, pos, BALL_R + 1, 1)
                 pygame.draw.circle(s, WHITE, pos, 2)
 
-        pygame.draw.rect(s, (24, 24, 34), (0, FLOOR_Y, W, H - FLOOR_Y))
-        pygame.draw.line(s, (120, 120, 140), (0, FLOOR_Y), (W, FLOOR_Y), 2)
-        hp_color = (255, 120, 120) if game.hurt_fx > 0 else WHITE
-        self._text(s, f"HP {game.hero.hp}/{game.hero.max_hp}", self.small, hp_color,
-                   topleft=(10, H - 22))
-        self._bar(s, 100, H - 20, 140, 10,
-                  game.hp_ghost / game.hero.max_hp, (255, 170, 60))
-        self._bar(s, 100, H - 20, 140, 10,
-                  game.hero.hp / game.hero.max_hp, (90, 220, 120), back=False)
-        self._text(s, f"Balls {game.hero.balls}   Dmg {game.hero.damage}   Turn {game.turn}",
-                   self.small, WHITE, topleft=(260, H - 22))
+        self._draw_bottom_bar(s, game)
 
         self._draw_skill_badges(s, game)
 

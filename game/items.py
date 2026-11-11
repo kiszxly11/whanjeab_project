@@ -93,9 +93,10 @@ class PlusItem(ItemType):
         ctx.manager.extra_balls += 1
 
     def draw(self, r, surface, x, y):
-        c = (int(x), int(y))
-        pygame.draw.circle(surface, (80, 220, 120), c, ITEM_R)
-        r._text(surface, "+1", r.small, (10, 40, 10), center=c)
+        r._gem(surface, x, y, (70, 205, 105), ITEM_R + 2)
+        c = (int(x), int(y) + 1)
+        r._text(surface, "+1", r.small, (15, 70, 30), center=(c[0] + 1, c[1] + 1))
+        r._text(surface, "+1", r.small, WHITE, center=c)
 
 
 @register
@@ -113,9 +114,10 @@ class MultiItem(ItemType):
                                           ball.kind))
 
     def draw(self, r, surface, x, y):
-        c = (int(x), int(y))
-        pygame.draw.circle(surface, (80, 160, 255), c, ITEM_R)
-        r._text(surface, "x3", r.small, (10, 20, 60), center=c)
+        r._gem(surface, x, y, (70, 150, 255), ITEM_R + 2)
+        c = (int(x), int(y) + 1)
+        r._text(surface, "x3", r.small, (15, 40, 110), center=(c[0] + 1, c[1] + 1))
+        r._text(surface, "x3", r.small, WHITE, center=c)
 
 
 @register
@@ -128,11 +130,11 @@ class HealItem(ItemType):
         ctx.effect("heal", amount=gained)
 
     def draw(self, r, surface, x, y):
-        cx, cy = int(x), int(y)
-        pygame.draw.circle(surface, (255, 110, 150), (cx, cy), ITEM_R)
-        pygame.draw.circle(surface, WHITE, (cx, cy), ITEM_R, 2)
-        pygame.draw.rect(surface, WHITE, (cx - 2, cy - 6, 4, 12))      # white cross
-        pygame.draw.rect(surface, WHITE, (cx - 6, cy - 2, 12, 4))
+        r._gem(surface, x, y, (255, 95, 135), ITEM_R + 2)
+        cx, cy = int(x), int(y) + 1
+        for dx, dy, col in ((1, 1, (150, 30, 70)), (0, 0, WHITE)):           # shadow, then white cross
+            pygame.draw.rect(surface, col, (cx - 2 + dx, cy - 6 + dy, 4, 12), border_radius=1)
+            pygame.draw.rect(surface, col, (cx - 6 + dx, cy - 2 + dy, 12, 4), border_radius=1)
 
 
 @register
@@ -146,8 +148,8 @@ class SkillItem(ItemType):
 
     def draw(self, r, surface, x, y):
         c = (int(x), int(y))
+        R = ITEM_R + 3                                   # a little bigger: it's the rare one
         pulse = int(2 * math.sin(pygame.time.get_ticks() / 150))
-        pygame.draw.circle(surface, (255, 230, 120), c, ITEM_R + 4 + pulse, 2)
-        pygame.draw.circle(surface, (255, 205, 60), c, ITEM_R)
-        pygame.draw.circle(surface, WHITE, c, ITEM_R, 2)
-        r._star(surface, x, y, 8, 3.5, (110, 60, 0))
+        pygame.draw.circle(surface, (255, 230, 120), c, R + 4 + pulse, 2)    # pulsing ring
+        r._gem(surface, x, y, (255, 200, 60), R)
+        r._star(surface, x, y + 1, 8, 3.5, (120, 65, 0))
