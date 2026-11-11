@@ -169,7 +169,7 @@ class Renderer:
                 py = HERO_Y - HERO_R - math.sin(angle) * i * 26
                 if 0 < px < W and py > BOSS_H:
                     pygame.draw.circle(s, (200, 200, 220), (int(px), int(py)), 2)
-            pygame.draw.rect(s, (40, 40, 56), (0, BOTTOM_STRIP_Y, W, 2))
+            #pygame.draw.rect(s, (40, 40, 56), (0, BOTTOM_STRIP_Y, W, 2))
 
         for ball in game.balls.balls:
             pos = (int(ball.x), int(ball.y))

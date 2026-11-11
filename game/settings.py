@@ -32,10 +32,10 @@ ITEM_SKILL = "skill"
 ITEM_HEAL = "heal"
 HEAL_RATIO = 0.05            # heal item restores this fraction of the hero's max HP
 ITEM_WEIGHTS = {             # relative spawn chance of each item kind (any positive numbers)
-    ITEM_PLUS: 48,
-    ITEM_MULTI: 20,
-    ITEM_HEAL: 17,
-    ITEM_SKILL: 15,
+    ITEM_PLUS: 38,
+    ITEM_MULTI: 22,
+    ITEM_HEAL: 20,
+    ITEM_SKILL: 20,
 }
 
 END_PHASE_DELAY = 0.7

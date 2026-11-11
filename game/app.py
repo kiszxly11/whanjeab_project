@@ -79,6 +79,7 @@ class Game:
     def new_game(self):
         self.hero = Hero()
         self.hurt_fx = 0.0
+        self.dragging = False
         self.shake = 0.0
         self.shake_len = 1.0
         self.shake_pow = 0
@@ -285,12 +286,18 @@ class Game:
             self.ff = not self.ff
             return
 
+        if e.type == pygame.MOUSEBUTTONUP and e.button == 1:
+            self.dragging = False
+
         if self.state == State.AIM:
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 if e.pos[1] >= BOTTOM_STRIP_Y:
+                    self.dragging = True
                     self.hero.move_to(e.pos[0])
                 else:
                     self.fire()
+            elif e.type == pygame.MOUSEMOTION and self.dragging:
+                self.hero.move_to(e.pos[0])
 
     def update(self, dt):
         if self.app_state in ('PLAYING', 'WIN_SCREEN', 'LOSE_SCREEN', 'SKILL_SELECT'):
