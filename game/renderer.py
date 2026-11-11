@@ -29,6 +29,9 @@ class Renderer:
     def __init__(self, screen):
         self.screen = screen
         self.font = pygame.font.SysFont("arial", 18, bold=True)
+        self._block_shadow = pygame.Surface((CELL - 4, CELL - 4), pygame.SRCALPHA)
+        pygame.draw.rect(self._block_shadow, (10, 20, 50, 90),
+                         self._block_shadow.get_rect(), border_radius=10)
         self.big = pygame.font.SysFont("arial", 44, bold=True)
         self.small = pygame.font.SysFont("arial", 14, bold=True)
         self.mid = pygame.font.SysFont("arial", 30, bold=True)
@@ -119,12 +122,29 @@ class Renderer:
                 self._aim_cache[key] = (30, 30, 50) if lum > 140 else (235, 235, 250)
         return self._aim_cache[key]
 
+    def _draw_block(self, s, block, color):
+        r = block.rect
+        s.blit(self._block_shadow, (r.x, r.y + 5))                        # soft drop shadow
+
+        edge = mix(color, (0, 0, 0), 0.55)
+        base = mix(color, (0, 0, 0), 0.30)
+        pygame.draw.rect(s, base, r, border_radius=10)                    # darker bottom edge
+        face = pygame.Rect(r.x, r.y, r.w, r.h - 6)
+        pygame.draw.rect(s, color, face, border_radius=10)                # main face
+        shine = pygame.Rect(r.x + 7, r.y + 5, r.w - 14, 6)
+        pygame.draw.rect(s, mix(color, WHITE, 0.45), shine, border_radius=3)   # gloss strip
+        pygame.draw.rect(s, edge, r, width=2, border_radius=10)           # outline
+
+        cx, cy = face.center[0], face.center[1] + 3
+        self._text(s, str(block.hp), self.font, (40, 30, 50), center=(cx + 1, cy + 2))  # text shadow
+        self._text(s, str(block.hp), self.font, WHITE, center=(cx, cy))
+
     def draw(self, game):
         s = game.canvas
         #s.fill(BG)
 
-        for col in range(1, COLS):
-            pygame.draw.line(s, GRID_LINE, (col * CELL, GRID_TOP), (col * CELL, FLOOR_Y))
+        #for col in range(1, COLS):
+            #pygame.draw.line(s, GRID_LINE, (col * CELL, GRID_TOP), (col * CELL, FLOOR_Y))
 
         self._draw_boss(s, game)
         self._draw_fast_forward(s, game)
@@ -136,8 +156,7 @@ class Renderer:
                 color = mix(color, (170, 225, 255), 0.6)
             if block.flash > 0:
                 color = mix(color, WHITE, 0.85 * block.flash / BLOCK_FLASH)
-            pygame.draw.rect(s, color, block.rect, border_radius=6)
-            self._text(s, str(block.hp), self.font, (20, 20, 20), center=block.rect.center)
+            self._draw_block(s, block, color)
         for block in game.field.blocks:              # second pass: nothing covers the status
             self._draw_block_status(s, block)
 
