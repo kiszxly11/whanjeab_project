@@ -5,10 +5,11 @@ import pygame
 
 from .settings import (
     ATTACK_FX_TIME, BALL_R, BG, BOSS_H, BOTTOM_STRIP_Y,
-    CELL, COLS, FLOOR_Y, GRID_LINE, GRID_TOP, H, HERO_R, HERO_Y, ITEM_PLUS,
-    ITEM_R, State, W, WHITE, BLOCK_FLASH, ITEM_SKILL, BALL_NORMAL, SKILL_LIGHTNING,
+    CELL, COLS, FLOOR_Y, GRID_LINE, GRID_TOP, H, HERO_R, HERO_Y,
+    State, W, WHITE, BLOCK_FLASH, BALL_NORMAL, SKILL_LIGHTNING,
     block_color
 )
+from .items import ITEMS
 from .skills import SKILLS
 from .systems import aim_angle
 
@@ -144,18 +145,7 @@ class Renderer:
 
         for item in game.field.items:
             x, y = item.pos
-            if item.kind == ITEM_PLUS:
-                pygame.draw.circle(s, (80, 220, 120), (int(x), int(y)), ITEM_R)
-                self._text(s, "+1", self.small, (10, 40, 10), center=(int(x), int(y)))
-            elif item.kind == ITEM_SKILL:
-                pulse = int(2 * math.sin(pygame.time.get_ticks() / 150))
-                pygame.draw.circle(s, (255, 230, 120), (int(x), int(y)), ITEM_R + 4 + pulse, 2)
-                pygame.draw.circle(s, (255, 205, 60), (int(x), int(y)), ITEM_R)
-                pygame.draw.circle(s, WHITE, (int(x), int(y)), ITEM_R, 2)
-                self._star(s, x, y, 8, 3.5, (110, 60, 0))
-            else:
-                pygame.draw.circle(s, (80, 160, 255), (int(x), int(y)), ITEM_R)
-                self._text(s, "x3", self.small, (10, 20, 60), center=(int(x), int(y)))
+            ITEMS[item.kind].draw(self, s, x, y)
 
         pygame.draw.line(s, (120, 120, 140), (0, FLOOR_Y), (W, FLOOR_Y), 2)
         atk = game.boss.atk_fx / ATTACK_FX_TIME

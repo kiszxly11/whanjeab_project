@@ -16,7 +16,7 @@ from .settings import (
 from .skills import SKILLS, run_turn_end
 from .systems import BallManager, Field, aim_angle
 from .display import Display
-from .menu import UIManager, load_assets, draw_game_field, draw_main_menu_bg
+from .ui import UIManager, load_assets, draw_game_field, draw_main_menu_bg
 
 class Game:
     def __init__(self):
@@ -138,6 +138,11 @@ class Game:
             self.add_shake(HIT_SHAKE_TIME, HIT_SHAKE_POWER)
         elif kind == "bounce":
             self.spawn_particles(data["pos"], SKILLS[SKILL_BOUNCE].color)
+        elif kind == "heal":
+            x, y = data["pos"]
+            self.spawn_particles((x, y), (255, 110, 150))
+            self.floaters.append({"text": f"+{data['amount']}", "x": x, "y": y,
+                                  "t": 0.0, "life": 0.9, "color": (110, 240, 140)})
         elif kind == "skill_item":
             x, y = data["pos"]
             self.floaters.append({"text": "SKILL!", "x": x, "y": y,

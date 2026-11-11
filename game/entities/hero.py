@@ -23,12 +23,18 @@ class Hero:
     def take_damage(self, amount):        # Hero Damage System
         self.hp = max(0, self.hp - amount)
 
+    def heal(self, amount):               # Heal item
+        """Restore HP (capped at max). Returns the HP actually gained."""
+        before = self.hp
+        self.hp = min(self.max_hp, self.hp + amount)
+        return self.hp - before
+
     def level_up(self):                   # Hero Progression
         self.max_hp += 10
         self.hp = min(self.max_hp, self.hp + 30)
         self.balls += 2
-        #if random.random() < 0.5:
-          #  self.damage += 1
+        if random.random() < 0.5:
+            self.damage += 1
 
     def add_skill(self, kind):            # Skill pick: +1 special ball every volley
         self.skills[kind] = self.skills.get(kind, 0) + 1

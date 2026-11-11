@@ -19,9 +19,15 @@ Ball-shooting boss battle built with pygame.
       settings.py               constants, tuning values, State names
       display.py                window sizing: fits the screen, scales the 480x800 game, maps the mouse
       skills.py                 every skill (special ball) as a small class
+      items.py                  Item + every item kind (+1, x3, heal, skill star): effect, look, spawn
       app.py                    game state, input, turn logic, effects, fast-forward
       renderer.py               all drawing and visual effects
-      entities/                 Ball, Hero, Boss, Block, Item
+      ui/                       menus and screens
+        assets.py               loads the bg_*.jpg images from assets/
+        backgrounds.py          code-drawn backgrounds (used when an image is missing)
+        widgets.py              buttons, text wrapping, skill choice card
+        manager.py              UIManager: menu, pause, win/lose and skill-pick screens
+      entities/                 Ball, Hero, Boss, Block
       systems/
         ball_manager.py         ball movement, collisions, volleys, hit callbacks
         field.py                block + item grid (spawn, move down, hero collision)
@@ -50,6 +56,17 @@ chance, ...) are in `game/settings.py`.
 All skill code lives in `game/skills.py`: one small class per skill (hooks `on_block_hit`,
 `on_boss_hit`, `on_turn_end`, plus its icon). Add a class with `@register` and it appears on the
 choice screen, in the HUD and in volleys automatically.
+
+## Items
+All grid items live in `game/items.py`, one small class each (`on_collect`, `draw`).
+
+- **+1** (green): +1 ball for the next round.
+- **x3** (blue): splits the ball that touches it into three.
+- **Heal** (pink cross): instantly restores 5% of max HP (`HEAL_RATIO`).
+- **Skill star** (gold): pick 1 of 3 skills after the volley.
+
+Spawn chances are the `ITEM_WEIGHTS` table in `game/settings.py`. To add an item, write a class
+with `@register` in `items.py` and give it a weight there.
 
 ## Added effects
 - Boss attack glow, beam, hero shockwave, blinking, and floating damage number.

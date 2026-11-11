@@ -2,8 +2,8 @@ import math
 
 from ..entities import Ball
 from ..settings import (BALL_NORMAL, BALL_R, BALL_SPEED, FIRE_INTERVAL,
-                        FLOOR_Y, HERO_R, HERO_Y, ITEM_PLUS, ITEM_R, ITEM_SKILL,
-                        W, block_color)
+                        FLOOR_Y, HERO_R, HERO_Y, ITEM_R, W, block_color)
+from ..items import ITEMS, ItemContext
 from ..skills import SKILLS, HitContext
 
 
@@ -13,7 +13,7 @@ class BallManager:
     Optional callbacks (all passed to update()):
       on_boss_hit()                 a ball damaged the boss
       on_block_break(pos, color)    a block was destroyed
-      on_effect(kind, **data)       visual-only events: 'bolt', 'bounce', 'skill_item'
+      on_effect(kind, **data)       visual-only events: 'bolt', 'bounce', 'skill_item', 'heal'
     """
 
     def __init__(self):
@@ -81,7 +81,7 @@ class BallManager:
             self._collide_floor(ball)
             if not ball.active:
                 return
-            self._collect_items(ball, field, on_effect)
+            self._collect_items(ball, hero, field, on_effect)
             self._collide_blocks(ball, hero, field, on_block_break, on_effect)
 
     # --------------------------------------------------------- collisions
@@ -150,22 +150,9 @@ class BallManager:
                 skill.on_block_hit(b, blk, ctx)
             break                                 # one block per sub-step
 
-    def _collect_items(self, b, field, on_effect=None):   # Special items
+    def _collect_items(self, b, hero, field, on_effect=None):   # Special items
         for it in field.items[:]:
             ix, iy = it.pos
             if math.hypot(b.x - ix, b.y - iy) < BALL_R + ITEM_R:
                 field.items.remove(it)
-                if it.kind == ITEM_PLUS:
-                    self.extra_balls += 1
-                elif it.kind == ITEM_SKILL:
-                    self.skills_collected += 1
-                    if on_effect:
-                        on_effect("skill_item", pos=(ix, iy))
-                else:                             # multiply the ball (children keep its kind)
-                    ang = math.atan2(b.vy, b.vx)
-                    for off in (-0.35, 0.35):
-                        a = ang + off
-                        self.balls.append(Ball(b.x, b.y,
-                                               math.cos(a) * BALL_SPEED,
-                                               math.sin(a) * BALL_SPEED,
-                                               b.kind))
+                ITEMS[it.kind].on_collect(b, ItemContext(self, hero, (ix, iy), on_effect))

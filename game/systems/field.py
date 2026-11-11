@@ -1,8 +1,8 @@
 import random
 
-from ..entities import Block, Item
-from ..settings import (COLS, ITEM_MULTI, ITEM_PLUS, ITEM_SKILL, MAX_ROWS,
-                        SKILL_ITEM_CHANCE)
+from ..entities import Block
+from ..items import Item, pick_kind
+from ..settings import COLS, MAX_ROWS
 
 
 class Field:
@@ -28,12 +28,7 @@ class Field:
                 hi = turn + stage * 2
                 self.blocks.append(Block(col, 0, random.randint(lo, hi)))
             elif r < 0.52:
-                if random.random() < SKILL_ITEM_CHANCE:
-                    kind = ITEM_SKILL
-                elif random.random() < 0.3:
-                    kind = ITEM_MULTI
-                else:
-                    kind = ITEM_PLUS
+                kind = pick_kind()
                 self.items.append(Item(col, 0, kind))
 
     def move_down(self):                  # Block Movement System

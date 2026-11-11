@@ -29,7 +29,14 @@ ITEM_R = 11
 ITEM_PLUS = "plus"
 ITEM_MULTI = "multi"
 ITEM_SKILL = "skill"
-SKILL_ITEM_CHANCE = 0.15     # share of item cells that become skill items
+ITEM_HEAL = "heal"
+HEAL_RATIO = 0.05            # heal item restores this fraction of the hero's max HP
+ITEM_WEIGHTS = {             # relative spawn chance of each item kind (any positive numbers)
+    ITEM_PLUS: 48,
+    ITEM_MULTI: 20,
+    ITEM_HEAL: 17,
+    ITEM_SKILL: 15,
+}
 
 END_PHASE_DELAY = 0.7
 ATTACK_FX_TIME = 0.5
