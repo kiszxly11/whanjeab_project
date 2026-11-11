@@ -54,6 +54,9 @@ class Renderer:
         self.small = pygame.font.SysFont("arial", 14, bold=True)
         self.mid = pygame.font.SysFont("arial", 30, bold=True)
         self.tiny = pygame.font.SysFont("arial", 11, bold=True)
+        self.bar_font = pygame.font.SysFont("arial", 15, bold=True)     # HP numbers on the bars
+        self.title_font = pygame.font.SysFont("arial", 17, bold=True)   # "BOSS Stage ..." line
+        self._outline_cache = {}
         self._aim_cache = {}
 
     def _text(self, surface, value, font, color, center=None, topleft=None):
@@ -64,6 +67,25 @@ class Renderer:
         if topleft is not None:
             rect.topleft = topleft
         surface.blit(image, rect)
+
+    def _outlined(self, surface, value, font, color, center, outline=(12, 8, 20), width=2):
+        """Text with a dark outline so it stays readable on any bar or background."""
+        key = (value, id(font), color, outline, width)
+        image = self._outline_cache.get(key)
+        if image is None:
+            body = font.render(value, True, color)
+            edge = font.render(value, True, outline)
+            image = pygame.Surface((body.get_width() + 2 * width, body.get_height() + 2 * width),
+                                   pygame.SRCALPHA)
+            for dx in range(-width, width + 1):
+                for dy in range(-width, width + 1):
+                    if dx * dx + dy * dy <= width * width + 1:
+                        image.blit(edge, (width + dx, width + dy))
+            image.blit(body, (width, width))
+            if len(self._outline_cache) > 300:
+                self._outline_cache.clear()
+            self._outline_cache[key] = image
+        surface.blit(image, image.get_rect(center=center))
 
     def _bar(self, surface, x, y, w, h, ratio, color, back=True):
         if back:
@@ -214,7 +236,7 @@ class Renderer:
         # health: heart + bar (orange "ghost" shows recent damage, fill colour follows health)
         hurt = game.hurt_fx > 0
         self._draw_heart(s, 20, cy, (255, 100, 110))
-        bar = pygame.Rect(36, cy - 8, 200, 16)
+        bar = pygame.Rect(36, cy - 10, 200, 20)
         pygame.draw.rect(s, (35, 35, 48), bar, border_radius=8)
         ratio = max(0.0, hero.hp / hero.max_hp)
         ghost = max(0.0, game.hp_ghost / hero.max_hp)
@@ -231,8 +253,7 @@ class Renderer:
                                 (bar.x + 5, bar.y + 3, fill_w - 6, 3), border_radius=2)
         pygame.draw.rect(s, (10, 10, 18), bar, width=2, border_radius=8)
         txt = f"{hero.hp}/{hero.max_hp}"
-        self._text(s, txt, self.tiny, (20, 20, 30), center=(bar.centerx + 1, bar.centery + 1))
-        self._text(s, txt, self.tiny, (255, 140, 140) if hurt else WHITE, center=bar.center)
+        self._outlined(s, txt, self.bar_font, (255, 150, 150) if hurt else WHITE, bar.center)
 
         # stat pills
         x = W - 3 * 62 - 2 * 6 - 10
@@ -368,11 +389,10 @@ class Renderer:
         self._draw_boss_face(surface, W // 2, 38, boss.flash > 0, atk)
 
         title = f"BOSS  Stage {game.stage}   ATK {boss.attack}"
-        self._text(surface, title, self.small, (40, 10, 25), center=(W // 2 + 1, 79))
-        self._text(surface, title, self.small, WHITE, center=(W // 2, 78))
+        self._outlined(surface, title, self.title_font, WHITE, (W // 2, 77), outline=(40, 10, 25))
 
         # health bar: dark track, red fill with a shine, outline
-        bar = pygame.Rect(20, 89, W - 40, 16)
+        bar = pygame.Rect(20, 88, W - 40, 19)
         pygame.draw.rect(surface, (35, 12, 24), bar, border_radius=8)
         ratio = max(0.0, boss.hp / boss.max_hp)
         fill_w = int((bar.w - 4) * ratio)
@@ -384,8 +404,7 @@ class Renderer:
                                 (fill.x + 3, fill.y + 1, fill_w - 6, 3), border_radius=2)
         pygame.draw.rect(surface, (15, 5, 12), bar, width=2, border_radius=8)
         hp_text = f"{boss.hp}/{boss.max_hp}"
-        self._text(surface, hp_text, self.tiny, (40, 10, 25), center=(W // 2 + 1, bar.centery + 1))
-        self._text(surface, hp_text, self.tiny, WHITE, center=(W // 2, bar.centery))
+        self._outlined(surface, hp_text, self.bar_font, WHITE, (W // 2, bar.centery), outline=(40, 10, 25))
 
     def _draw_boss_face(self, s, cx, cy, flash, atk):
         skin = WHITE if flash else (84, 40, 78)                  # whole head flashes white when hit
