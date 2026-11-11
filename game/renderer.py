@@ -180,6 +180,7 @@ class Renderer:
                 pygame.draw.circle(s, WHITE, pos, BALL_R + 1, 1)
                 pygame.draw.circle(s, WHITE, pos, 2)
 
+        pygame.draw.rect(s, (24, 24, 34), (0, FLOOR_Y, W, H - FLOOR_Y))
         hp_color = (255, 120, 120) if game.hurt_fx > 0 else WHITE
         self._text(s, f"HP {game.hero.hp}/{game.hero.max_hp}", self.small, hp_color,
                    topleft=(10, H - 22))
