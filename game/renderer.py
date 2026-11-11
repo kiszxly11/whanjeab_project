@@ -2,6 +2,9 @@ import math
 import random
 
 import pygame
+from pygame import surface
+
+import game
 
 from .settings import (
     ATTACK_FX_TIME, BALL_R, BG, BOSS_H, BOTTOM_STRIP_Y,
@@ -33,6 +36,14 @@ class Renderer:
         pygame.draw.rect(self._block_shadow, (10, 20, 50, 90),
                          self._block_shadow.get_rect(), border_radius=10)
         self.big = pygame.font.SysFont("arial", 44, bold=True)
+        self._boss_panel = pygame.Surface((W, BOSS_H))
+        for y in range(BOSS_H):
+            pygame.draw.line(self._boss_panel, mix((150, 42, 66), (92, 24, 48), y / BOSS_H),
+                     (0, y), (W, y))
+            pygame.draw.line(self._boss_panel, (205, 95, 110), (0, 0), (W, 0), 1)                 # top light edge
+            pygame.draw.line(self._boss_panel, (55, 12, 28), (0, BOSS_H - 2), (W, BOSS_H - 2), 3)  # bottom dark edge
+        self._boss_tint = pygame.Surface((W, BOSS_H))                                        # red flash when it attacks
+        self._boss_tint.fill((255, 60, 40))
         self.small = pygame.font.SysFont("arial", 14, bold=True)
         self.mid = pygame.font.SysFont("arial", 30, bold=True)
         self.tiny = pygame.font.SysFont("arial", 11, bold=True)
@@ -251,22 +262,67 @@ class Renderer:
         #pygame.display.flip()
 
     def _draw_boss(self, surface, game):
-        attack_ratio = game.boss.atk_fx / ATTACK_FX_TIME
-        if game.boss.flash > 0:
-            boss_color = WHITE
-        else:
-            boss_color = mix((170, 50, 70), (255, 60, 30), attack_ratio)
-        eye_color = mix((255, 220, 0), (255, 40, 40), attack_ratio)
-        pygame.draw.rect(surface, boss_color, game.boss.rect)
-        for dx in (-50, 50):
-            pygame.draw.circle(surface, (20, 20, 20), (W // 2 + dx, 45), 14)
-            pygame.draw.circle(surface, eye_color, (W // 2 + dx, 45), 6)
-        self._text(surface, f"BOSS  Stage {game.stage}   ATK {game.boss.attack}",
-                   self.small, WHITE, center=(W // 2, 78))
-        self._bar(surface, 20, 90, W - 40, 12,
-                  game.boss.hp / game.boss.max_hp, (255, 90, 90))
-        self._text(surface, f"{game.boss.hp}/{game.boss.max_hp}", self.small,
-                   WHITE, center=(W // 2, 96))
+        boss = game.boss
+        atk = boss.atk_fx / ATTACK_FX_TIME
+
+        surface.blit(self._boss_panel, (0, 0))
+        if atk > 0:                                              # whole panel flushes red on attack
+            self._boss_tint.set_alpha(int(90 * atk))
+            surface.blit(self._boss_tint, (0, 0))
+
+        self._draw_boss_face(surface, W // 2, 38, boss.flash > 0, atk)
+
+        title = f"BOSS  Stage {game.stage}   ATK {boss.attack}"
+        self._text(surface, title, self.small, (40, 10, 25), center=(W // 2 + 1, 79))
+        self._text(surface, title, self.small, WHITE, center=(W // 2, 78))
+
+        # health bar: dark track, red fill with a shine, outline
+        bar = pygame.Rect(20, 89, W - 40, 16)
+        pygame.draw.rect(surface, (35, 12, 24), bar, border_radius=8)
+        ratio = max(0.0, boss.hp / boss.max_hp)
+        fill_w = int((bar.w - 4) * ratio)
+        if fill_w > 0:
+            fill = pygame.Rect(bar.x + 2, bar.y + 2, fill_w, bar.h - 4)
+            pygame.draw.rect(surface, (255, 85, 85), fill, border_radius=6)
+            if fill_w > 8:
+                pygame.draw.rect(surface, mix((255, 85, 85), WHITE, 0.5),
+                                (fill.x + 3, fill.y + 1, fill_w - 6, 3), border_radius=2)
+        pygame.draw.rect(surface, (15, 5, 12), bar, width=2, border_radius=8)
+        hp_text = f"{boss.hp}/{boss.max_hp}"
+        self._text(surface, hp_text, self.tiny, (40, 10, 25), center=(W // 2 + 1, bar.centery + 1))
+        self._text(surface, hp_text, self.tiny, WHITE, center=(W // 2, bar.centery))
+
+    def _draw_boss_face(self, s, cx, cy, flash, atk):
+        skin = WHITE if flash else (84, 40, 78)                  # whole head flashes white when hit
+        outline = (30, 12, 30)
+        bone, bone_edge = (238, 228, 200), (150, 135, 110)
+
+        for sign in (-1, 1):                                     # horns
+            horn = [(cx + sign * 44, cy - 10), (cx + sign * 56, cy - 34), (cx + sign * 24, cy - 26)]
+            pygame.draw.polygon(s, bone, horn)
+            pygame.draw.polygon(s, bone_edge, horn, 2)
+
+        head = pygame.Rect(0, 0, 104, 56)
+        head.center = (cx, cy)
+        pygame.draw.rect(s, mix(skin, (0, 0, 0), 0.45), head.move(0, 3), border_radius=16)  # lower edge
+        pygame.draw.rect(s, skin, head, border_radius=16)
+        pygame.draw.rect(s, mix(skin, WHITE, 0.3),
+                        (head.x + 12, head.y + 4, head.w - 24, 4), border_radius=2)        # gloss
+        pygame.draw.rect(s, outline, head, width=2, border_radius=16)
+
+        eye = mix((255, 220, 0), (255, 40, 40), atk)             # eyes turn red when attacking
+        for sign in (-1, 1):
+            ex, ey = cx + sign * 22, cy - 4
+            pygame.draw.circle(s, (20, 8, 20), (ex, ey), 11)
+            pygame.draw.circle(s, eye, (ex, ey), 7)
+            pygame.draw.circle(s, (20, 8, 20), (ex, ey), 3)
+            pygame.draw.line(s, outline, (ex + sign * 12, ey - 14), (ex - sign * 10, ey - 7), 4)  # angry brow
+
+        mouth = pygame.Rect(cx - 24, cy + 12, 48, 11 + int(6 * atk))   # opens wider when attacking
+        pygame.draw.rect(s, (30, 10, 25), mouth, border_radius=4)
+        for i in range(4):                                       # teeth
+            x = mouth.x + 4 + i * 11
+            pygame.draw.polygon(s, bone, [(x, mouth.y), (x + 9, mouth.y), (x + 4, mouth.y + 6)])
 
     def _draw_fast_forward(self, surface, game):
         if game.state in (State.AIM, State.ATTACK):
