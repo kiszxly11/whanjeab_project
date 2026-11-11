@@ -35,12 +35,16 @@ class Display:
 
     def present(self):
         window = pygame.display.get_surface()
-        x, y, vw, vh = self._view()
-        if (vw, vh) == (self.w, self.h) and window.get_size() == (self.w, self.h):
-            window.blit(self.surface, (0, 0))
+        ww, wh = window.get_size()
+        s = min(ww / self.w, wh / self.h)
+        if s >= 1:
+            s = int(s)                      # whole-number scale = crisp pixels
+            scaled = pygame.transform.scale(self.surface, (self.w * s, self.h * s))
         else:
-            window.fill((0, 0, 0))
-            window.blit(pygame.transform.smoothscale(self.surface, (vw, vh)), (x, y))
+            s = max(s, 0.1)                 # smaller than 1 -> smooth shrink looks better
+            scaled = pygame.transform.smoothscale(self.surface, (int(self.w * s), int(self.h * s)))
+        window.fill((0, 0, 0))
+        window.blit(scaled, ((ww - scaled.get_width()) // 2, (wh - scaled.get_height()) // 2))
         pygame.display.flip()
 
     def to_logical(self, pos):
