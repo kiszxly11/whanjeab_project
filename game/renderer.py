@@ -33,6 +33,7 @@ class Renderer:
         self.small = pygame.font.SysFont("arial", 14, bold=True)
         self.mid = pygame.font.SysFont("arial", 30, bold=True)
         self.tiny = pygame.font.SysFont("arial", 11, bold=True)
+        self._aim_cache = {}
 
     def _text(self, surface, value, font, color, center=None, topleft=None):
         image = font.render(value, True, color)
@@ -105,6 +106,19 @@ class Renderer:
             self._star(s, x + 10, 120, 7, 3, (255, 205, 60))
             self._text(s, f"x{pending}", self.small, (255, 215, 70), center=(x + 33, 120))
 
+    def aim_color(self, game):
+        key = game.current_theme
+        if key not in self._aim_cache:
+            bg = game.assets.get(key)
+            if bg is None:                                   # code-drawn fallback background
+                self._aim_cache[key] = (200, 200, 220)
+            else:
+                area = pygame.Rect(0, GRID_TOP, W, FLOOR_Y - GRID_TOP)   # only the play area
+                r, g, b = pygame.transform.average_color(bg, area)[:3]
+                lum = 0.299 * r + 0.587 * g + 0.114 * b
+                self._aim_cache[key] = (30, 30, 50) if lum > 140 else (235, 235, 250)
+        return self._aim_cache[key]
+
     def draw(self, game):
         s = game.canvas
         #s.fill(BG)
@@ -164,11 +178,12 @@ class Renderer:
 
         if game.state == State.AIM:
             angle = aim_angle(game.hero.x, game.display.mouse_pos())
+            aim_col = self.aim_color(game)
             for i in range(1, 16):
                 px = game.hero.x + math.cos(angle) * i * 26
                 py = HERO_Y - HERO_R - math.sin(angle) * i * 26
                 if 0 < px < W and py > BOSS_H:
-                    pygame.draw.circle(s, (200, 200, 220), (int(px), int(py)), 2)
+                    pygame.draw.circle(s, aim_col, (int(px), int(py)), 2)
             #pygame.draw.rect(s, (40, 40, 56), (0, BOTTOM_STRIP_Y, W, 2))
 
         for ball in game.balls.balls:
@@ -181,6 +196,7 @@ class Renderer:
                 pygame.draw.circle(s, WHITE, pos, 2)
 
         pygame.draw.rect(s, (24, 24, 34), (0, FLOOR_Y, W, H - FLOOR_Y))
+        pygame.draw.line(s, (120, 120, 140), (0, FLOOR_Y), (W, FLOOR_Y), 2)
         hp_color = (255, 120, 120) if game.hurt_fx > 0 else WHITE
         self._text(s, f"HP {game.hero.hp}/{game.hero.max_hp}", self.small, hp_color,
                    topleft=(10, H - 22))
