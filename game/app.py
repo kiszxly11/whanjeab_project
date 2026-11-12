@@ -18,6 +18,17 @@ from .systems import BallManager, Field, aim_angle
 from .display import Display
 from .ui import UIManager, load_assets, draw_game_field, draw_main_menu_bg
 
+def make_bg_overlay(w, h, tint=55, edge=95, fade=110):
+    """Soft navy tint plus darker left/right edges. Built once, drawn over every background."""
+    overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+    for x in range(w):
+        d = min(x, w - 1 - x)                                  # distance from nearest side
+        a = tint
+        if d < fade:
+            a += int(edge * (1 - d / fade) ** 1.5)             # stronger toward the edge
+        pygame.draw.line(overlay, (8, 12, 30, min(255, a)), (x, 0), (x, h))
+    return overlay
+
 class Game:
     def __init__(self):
         pygame.init()
@@ -30,6 +41,7 @@ class Game:
         
         # โหลดเฉพาะภาพพื้นหลัง (ถ้ามี)
         self.assets = load_assets(W, H)
+        self.bg_overlay = make_bg_overlay(W, H)
         
         self.ff_button = pygame.Rect(W - 80, 8, 72, 26)
         self.ff = False
@@ -332,6 +344,7 @@ class Game:
             target_surface.blit(self.assets[self.current_theme], (0, 0))
         else:
             draw_game_field(target_surface, self.current_theme)
+        target_surface.blit(self.bg_overlay, (0, 0))
             
         self.renderer.screen = target_surface
         self.renderer.draw(self)

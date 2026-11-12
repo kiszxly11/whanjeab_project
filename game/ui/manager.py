@@ -30,6 +30,19 @@ class UIManager:
 
         self.card_name_font = pygame.font.SysFont('tahoma', 20, bold=True)
         self.card_desc_font = pygame.font.SysFont('tahoma', 14, bold=True)
+        self.skill_title_font = pygame.font.SysFont('impact', 40)
+
+        # panel background: navy gradient with rounded corners, built once
+        panel_size = (width - 48, 505)
+        grad = pygame.Surface(panel_size, pygame.SRCALPHA)
+        for y in range(panel_size[1]):
+            t = y / panel_size[1]
+            col = tuple(int(a + (b - a) * t) for a, b in zip((46, 50, 82), (22, 24, 42)))
+            pygame.draw.line(grad, col + (255,), (0, y), (panel_size[0], y))
+        mask = pygame.Surface(panel_size, pygame.SRCALPHA)
+        pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=20)
+        grad.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)    # clips the corners
+        self._skill_panel = grad
         self.skill_cards = []
 
     def handle_event(self, event, state):
@@ -88,20 +101,25 @@ class UIManager:
         surface.blit(veil, (0, 0))
 
         panel = pygame.Rect(24, 130, self.width - 48, 505)
-        pygame.draw.rect(surface, (250, 250, 250), panel, border_radius=20)
-        pygame.draw.rect(surface, (200, 210, 220), panel, 4, border_radius=20)
+        surface.blit(self._skill_panel, panel.topleft)
+        pygame.draw.rect(surface, (10, 10, 22), panel.inflate(6, 6), 3, border_radius=22)   # dark outer line
+        pygame.draw.rect(surface, (110, 120, 170), panel, 3, border_radius=20)             # light border
+        pygame.draw.rect(surface, (78, 86, 130), (panel.x + 30, panel.y + 8, panel.w - 60, 4),
+                        border_radius=2)                                                   # gloss strip
 
-        title = self.title_font.render("CHOOSE A SKILL", True, (255, 170, 0))
-        title = pygame.transform.scale(title, (int(title.get_width() * 0.6), int(title.get_height() * 0.6)))
+        text = "CHOOSE A SKILL"
+        shadow = self.skill_title_font.render(text, True, (90, 50, 0))
+        title = self.skill_title_font.render(text, True, (255, 190, 40))
+        surface.blit(shadow, shadow.get_rect(center=(cx, 174)))
         surface.blit(title, title.get_rect(center=(cx, 170)))
-        sub = self.body_font.render("You get +1 of that ball in every volley", True, (110, 120, 135))
-        surface.blit(sub, sub.get_rect(center=(cx, 202)))
+        sub = self.body_font.render("You get +1 of that ball in every volley", True, (160, 172, 205))
+        surface.blit(sub, sub.get_rect(center=(cx, 204)))
 
         for card in self.skill_cards:
             card.draw(surface, self.card_name_font, self.card_desc_font,
-                      hero.skills.get(card.kind, 0), self.game.display.mouse_pos())
+                    hero.skills.get(card.kind, 0), self.game.display.mouse_pos())
 
-        hint = self.card_desc_font.render("Click a card or press 1 / 2 / 3", True, (140, 150, 165))
+        hint = self.card_desc_font.render("Click a card or press 1 / 2 / 3", True, (140, 152, 185))
         surface.blit(hint, hint.get_rect(center=(cx, 617)))
 
     def draw_overlay(self, surface):

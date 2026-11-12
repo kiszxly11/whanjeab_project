@@ -157,7 +157,9 @@ class Renderer:
                 self._aim_cache[key] = (200, 200, 220)
             else:
                 area = pygame.Rect(0, GRID_TOP, W, FLOOR_Y - GRID_TOP)   # only the play area
-                r, g, b = pygame.transform.average_color(bg, area)[:3]
+                shaded = bg.copy()
+                shaded.blit(game.bg_overlay, (0, 0))                      # measure what the player actually sees
+                r, g, b = pygame.transform.average_color(shaded, area)[:3]
                 lum = 0.299 * r + 0.587 * g + 0.114 * b
                 self._aim_cache[key] = (30, 30, 50) if lum > 140 else (235, 235, 250)
         return self._aim_cache[key]

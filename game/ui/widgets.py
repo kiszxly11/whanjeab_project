@@ -4,6 +4,10 @@ import math
 import pygame
 
 from ..skills import SKILLS
+from ..settings import WHITE
+
+def _mix(a, b, t):
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
 class GlossyButton:
@@ -129,26 +133,44 @@ class SkillCard:
 
     def draw(self, surface, name_font, desc_font, owned, mouse_pos):
         info = SKILLS[self.kind]
-        hovered = self.rect.collidepoint(mouse_pos)
+        r = self.rect
+        hovered = r.collidepoint(mouse_pos)
+        fill = (52, 58, 96) if hovered else (34, 38, 64)
+        edge = _mix(info.color, WHITE, 0.35) if hovered else info.color
 
-        shadow = self.rect.copy()
-        shadow.y += 5
-        pygame.draw.rect(surface, (190, 198, 208), shadow, border_radius=16)
-        pygame.draw.rect(surface, (255, 246, 222) if hovered else (255, 255, 255),
-                         self.rect, border_radius=16)
-        pygame.draw.rect(surface, info.color, self.rect, 4, border_radius=16)
+        pygame.draw.rect(surface, (8, 8, 18), r.move(0, 5), border_radius=16)           # shadow
+        pygame.draw.rect(surface, fill, r, border_radius=16)
+        pygame.draw.rect(surface, _mix(fill, WHITE, 0.14),
+                        (r.x + 16, r.y + 6, r.w - 32, 4), border_radius=2)             # gloss strip
+        pygame.draw.rect(surface, edge, r, 4 if hovered else 3, border_radius=16)       # skill-coloured border
 
-        info.draw_icon(surface, self.rect.x + 52, self.rect.centery, 28)
+        # icon: glossy gem, same style as the in-game items
+        cx, cy, ir = r.x + 52, r.centery, 28
+        pygame.draw.circle(surface, _mix(fill, info.color, 0.22), (cx, cy), ir + 9)     # soft glow
+        pygame.draw.circle(surface, (15, 25, 50), (cx, cy), ir + 2)                     # dark halo
+        pygame.draw.circle(surface, _mix(info.color, (0, 0, 0), 0.35), (cx, cy + 2), ir)
+        pygame.draw.circle(surface, info.color, (cx, cy), ir)
+        pygame.draw.ellipse(surface, _mix(info.color, WHITE, 0.4),
+                            (cx - int(ir * 0.6), cy - int(ir * 0.76), int(ir * 0.7), int(ir * 0.3)))
+        pygame.draw.circle(surface, WHITE, (cx, cy), ir, 3)
+        info.draw_glyph(surface, cx, cy, ir / 26.0)
 
-        text_x = self.rect.x + 100
-        name = name_font.render(info.name, True, (40, 45, 60))
-        surface.blit(name, (text_x, self.rect.y + 14))
-        for i, line in enumerate(wrap_text(info.desc, desc_font, self.rect.right - text_x - 16)):
-            surface.blit(desc_font.render(line, True, (90, 100, 115)),
-                         (text_x, self.rect.y + 46 + i * 20))
+        text_x = r.x + 100
+        surface.blit(name_font.render(info.name, True, (10, 12, 25)), (text_x + 1, r.y + 16))
+        surface.blit(name_font.render(info.name, True, WHITE), (text_x, r.y + 14))
+        for i, line in enumerate(wrap_text(info.desc, desc_font, r.right - text_x - 16)):
+            surface.blit(desc_font.render(line, True, (176, 186, 214)),
+                        (text_x, r.y + 46 + i * 20))
 
-        key = desc_font.render(f"[{self.number}]", True, (150, 160, 175))
-        surface.blit(key, (self.rect.right - key.get_width() - 14, self.rect.y + 14))
+        def chip(text, right, color):                       # small dark pill, like the bottom-bar stats
+            img = desc_font.render(text, True, color)
+            box = pygame.Rect(0, 0, img.get_width() + 16, 20)
+            box.topright = (right, r.y + 12)
+            pygame.draw.rect(surface, (14, 14, 24), box, border_radius=10)
+            pygame.draw.rect(surface, (70, 70, 95), box, 1, border_radius=10)
+            surface.blit(img, img.get_rect(center=box.center))
+            return box.left
+
+        left = chip(str(self.number), r.right - 14, (200, 206, 225))     # shortcut key
         if owned:
-            own = desc_font.render(f"owned x{owned}", True, info.color)
-            surface.blit(own, (self.rect.right - own.get_width() - 14, self.rect.bottom - 26))
+            chip(f"x{owned}", left - 6, info.color)                      # how many you already have
