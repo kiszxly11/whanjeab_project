@@ -77,3 +77,6 @@ with `@register` in `items.py` and give it a weight there.
 
 ## Tuning
 Edit `game/settings.py` to adjust gameplay and visual-effect constants.
+
+## Video gameplay
+https://youtube.com/shorts/GbQuTGfxNq0?feature=share
